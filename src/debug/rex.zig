@@ -91,7 +91,7 @@ pub fn run(gpa: std.mem.Allocator, io: std.Io, socket_path: []const u8) !void {
                     },
                 };
             },
-            else => if (host.owns(e.token)) try host.handle(io, e.token),
+            else => if (host.owns(e.token)) try host.handle(io, &loop, e.token),
         };
         if (pending_accept) try host.accept(io, &loop, &server);
     }

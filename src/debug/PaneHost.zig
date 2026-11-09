@@ -44,7 +44,7 @@ pub fn owns(self: *const PaneHost, token: usize) bool {
 }
 
 /// Handles an event for one of this host's tokens.
-pub fn handle(self: *PaneHost, io: std.Io, token: usize) !void {
+pub fn handle(self: *PaneHost, io: std.Io, loop: *const Loop, token: usize) !void {
     const i = (token - self.base) / 2;
     const source: Source = @fromBackingInt(@intCast((token - self.base) % 2));
     const slot = &self.panes[i];
@@ -53,10 +53,12 @@ pub fn handle(self: *PaneHost, io: std.Io, token: usize) !void {
     switch (source) {
         .socket => if (!try onMessage(io, p)) {
             std.debug.print("pane {d}: helper gone\n", .{p.id});
+            unregister(loop, p);
             close(io, p, slot);
         },
         .tty => if (!try onInput(p)) {
             std.debug.print("pane {d}: closed with q\n", .{p.id});
+            unregister(loop, p);
             close(io, p, slot);
         },
     }
@@ -120,6 +122,12 @@ fn onInput(p: *Pane) !bool {
 fn printSize(p: *Pane) !void {
     const ws = try p.term.size();
     try p.term.writer.print("size {d}x{d}\r\n", .{ ws.col, ws.row });
+}
+
+/// Takes the pane's fds back from the loop, before they close.
+fn unregister(loop: *const Loop, p: *const Pane) void {
+    loop.remove(p.stream.socket.handle) catch {};
+    loop.remove(p.term.fd) catch {};
 }
 
 /// Restores the terminal and hangs up, so the helper exits.

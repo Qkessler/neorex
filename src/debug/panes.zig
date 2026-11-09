@@ -36,7 +36,7 @@ pub fn run(io: std.Io, socket_path: []const u8) !void {
                 return;
             },
             token_server => pending_accept = true,
-            else => try host.handle(io, e.token),
+            else => try host.handle(io, &loop, e.token),
         };
         if (pending_accept) try host.accept(io, &loop, &server);
     }
